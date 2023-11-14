@@ -56,8 +56,8 @@ def generate_latex_content(text_ref, hebrew_text, english_text, verse_numbers):
 \setdefaultlanguage{english}
 \setotherlanguage{hebrew}
 
-\newfontfamily\hebrewfont[Script=Hebrew, Path=/Users/matthewmiller/Desktop/TaameyFrankCLM/, Extension=.ttf]{TaameyFrankCLM-Medium}
-\newfontfamily\englishfont[Path=/Users/matthewmiller/Desktop/Cardo/, Extension=.ttf]{Cardo-Regular}
+\newfontfamily\hebrewfont[Script=Hebrew, Path=./, Extension=.ttf]{TaameyFrankCLM-Medium}
+\newfontfamily\englishfont[Path=./, Extension=.ttf]{Cardo-Regular}
 
 \pagestyle{fancy}
 \fancyhf{}  % Clear header and footer
