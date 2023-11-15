@@ -1,5 +1,9 @@
-# Use the official image as a parent image
-FROM texlive/texlive
+# Start from a Python base image which includes Python and pip
+FROM python:3.9
+
+# Install TeX Live and any other system packages
+RUN apt-get update && \
+    apt-get install -y texlive
 
 # Set the working directory in the container
 WORKDIR /app
