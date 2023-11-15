@@ -3,6 +3,8 @@ import re
 import requests
 import subprocess
 import os
+import subprocess
+import tempfile
 from PyPDF2 import PdfReader
 from flask import Flask, request, send_file
 
@@ -118,25 +120,23 @@ def generate_latex_content(text_ref, hebrew_text, english_text, verse_numbers):
     return latex_content
 
 
-
-
-
 def compile_latex_to_pdf(latex_content, output_filename):
-    with open(output_filename + '.tex', 'w', encoding='utf-8') as file:
-        file.write(latex_content)
-    try:
-        subprocess.run(['xelatex', output_filename + '.tex'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    except subprocess.CalledProcessError as e:
-        print("Error compiling LaTeX file to PDF:")
-        print(e.output.decode())
-        print(e.stderr.decode())
-        raise
-    finally:
-        for ext in ['.aux', '.log', '.out', '.tex']:
-            try: 
-                os.remove(output_filename + ext)
-            except FileNotFoundError: 
+    # Create a temporary directory for LaTeX compilation
+    with tempfile.TemporaryDirectory() as temp_dir:
+        tex_file_path = os.path.join(temp_dir, output_filename + '.tex')
+        with open(tex_file_path, 'w', encoding='utf-8') as file:
+            file.write(latex_content)
+
+        # Run XeTeX with the temporary directory as the working directory
+        subprocess.run(['xelatex', tex_file_path], check=True, cwd=temp_dir)
+
+        # Clean up auxiliary files and move PDF to the desired output location
+        for ext in ['.aux', '.log', '.out']:
+            try:
+                os.remove(os.path.join(temp_dir, output_filename + ext))
+            except FileNotFoundError:
                 pass
+        os.rename(os.path.join(temp_dir, output_filename + '.pdf'), output_filename + '.pdf')
 
 
 def create_pdfs_from_csv(csv_file_path, output_dir, start_row=1, end_row=929):
