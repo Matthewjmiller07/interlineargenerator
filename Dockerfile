@@ -1,23 +1,24 @@
-# Use a base image with TeX Live installed
-FROM texlive/texlive:latest
+# Use the official image as a parent image
+FROM texlive/texlive
 
-# Install Python and pip
-RUN apt-get update && apt-get install -y python3 python3-pip
-
-# Set the working directory in the Docker container
+# Set the working directory in the container
 WORKDIR /app
 
 # Copy the current directory contents into the container at /app
 COPY . /app
 
+# Create a virtual environment and activate it
+RUN python3 -m venv venv
+ENV PATH="/app/venv/bin:$PATH"
+
 # Install any needed packages specified in requirements.txt
-RUN pip3 install -r requirements.txt
+RUN pip install -r requirements.txt
 
 # Make port available to the world outside this container
-EXPOSE 5000
+EXPOSE 80
 
 # Define environment variable
 ENV NAME World
 
 # Run the application
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:app"]
+CMD ["python", "app.py"]
