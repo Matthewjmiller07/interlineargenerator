@@ -1,9 +1,8 @@
-# Start from a Python base image which includes Python and pip
-FROM python:3.9
+# Use a base image with TeX Live pre-installed
+FROM texlive/texlive
 
-# Install TeX Live and any other system packages
-RUN apt-get update && \
-    apt-get install -y texlive
+# Install xelatex (if not already included in the texlive/texlive image)
+RUN apt-get update && apt-get install -y texlive-xetex
 
 # Set the working directory in the container
 WORKDIR /app
