@@ -1,11 +1,11 @@
 # Use a base image with TeX Live pre-installed
 FROM texlive/texlive
 
-# Install Python and pip
+# Install Python, pip, and python3-venv
 # Ensure that the package manager doesn't prompt for any input
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
-    apt-get install -y python3 python3-pip texlive-xetex && \
+    apt-get install -y python3 python3-pip python3-venv texlive-xetex && \
     rm -rf /var/lib/apt/lists/*
 
 # Set the working directory in the container
