@@ -13,7 +13,7 @@ jobs:
       - name: Login to Docker Hub
         uses: docker/login-action@v1
         with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          username: matthewjmiller07
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
       - name: Build and Push Docker image
@@ -22,4 +22,4 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: your-username/your-image-name:latest
+          tags: matthewjmiller07/interlinear:latest
