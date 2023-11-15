@@ -124,10 +124,19 @@ def generate_latex_content(text_ref, hebrew_text, english_text, verse_numbers):
 def compile_latex_to_pdf(latex_content, output_filename):
     with open(output_filename + '.tex', 'w', encoding='utf-8') as file:
         file.write(latex_content)
-    subprocess.run(['xelatex', output_filename + '.tex'], check=True)
-    for ext in ['.aux', '.log', '.out', '.tex']:
-        try: os.remove(output_filename + ext)
-        except FileNotFoundError: pass
+    try:
+        subprocess.run(['xelatex', output_filename + '.tex'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except subprocess.CalledProcessError as e:
+        print("Error compiling LaTeX file to PDF:")
+        print(e.output.decode())
+        print(e.stderr.decode())
+        raise
+    finally:
+        for ext in ['.aux', '.log', '.out', '.tex']:
+            try: 
+                os.remove(output_filename + ext)
+            except FileNotFoundError: 
+                pass
 
 
 def create_pdfs_from_csv(csv_file_path, output_dir, start_row=1, end_row=929):
