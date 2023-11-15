@@ -284,4 +284,8 @@ for he, en, verse in zip(hebrew_text, english_text, verse_numbers):
     print(f'Hebrew: {he}')
     print(f'English: {en}\n')
 
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))  # Use PORT environment variable if available, else default to 5000
+    app.run(host='0.0.0.0', port=port)
+
 
