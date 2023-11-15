@@ -286,7 +286,7 @@ def extract_start_verse(text_ref):
     return int(verse)
 
 
-# Example usage
+# Example usage 1
 hebrew_text, english_text, verse_numbers = fetch_interlinear_text("Mishnah Berachot 3:2-4:1")
 for he, en, verse in zip(hebrew_text, english_text, verse_numbers):
     print(f'Verse {verse}:')
