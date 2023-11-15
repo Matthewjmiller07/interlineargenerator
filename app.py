@@ -170,20 +170,33 @@ def index():
     '''
 
 
+from io import BytesIO
+import tempfile
+
 @app.route('/generate_pdf', methods=['POST'])
 def generate_pdf():
     text_ref = request.form['text_ref']
-    output_dir = '/Applications/Apps/bespokeInterlinear'  # Set your output directory
 
     try:
         hebrew_text, english_text, verse_numbers = fetch_interlinear_text(text_ref)
-
-        # Generate LaTeX content and compile to PDF
         latex_content = generate_latex_content(text_ref, hebrew_text, english_text, verse_numbers)
-        output_filename = f'{output_dir}/{text_ref.replace(" ", "_")}.pdf'
-        compile_latex_to_pdf(latex_content, output_filename)
 
-        return send_file(output_filename, as_attachment=True)
+        # Use a temporary file to store the LaTeX file and compile it
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            tex_file_path = os.path.join(tmpdirname, 'output.tex')
+            with open(tex_file_path, 'w', encoding='utf-8') as tex_file:
+                tex_file.write(latex_content)
+
+            # Compile LaTeX file to PDF
+            subprocess.run(['xelatex', tex_file_path, '-output-directory', tmpdirname], check=True)
+            
+            # Read the generated PDF into memory
+            pdf_file_path = tex_file_path.replace('.tex', '.pdf')
+            with open(pdf_file_path, 'rb') as pdf_file:
+                pdf_in_memory = BytesIO(pdf_file.read())
+
+        pdf_in_memory.seek(0)
+        return send_file(pdf_in_memory, as_attachment=True, download_name=f"{text_ref.replace(' ', '_')}.pdf", mimetype='application/pdf')
     except Exception as e:
         return f"An error occurred: {e}"
 
