@@ -200,49 +200,35 @@ def generate_pdf():
     logging.info(f"Received request to generate PDF for: {text_ref}")
 
     try:
-        # Assuming you have functions 'fetch_interlinear_text' and 'generate_latex_content'
+        # Fetching the interlinear text and generating LaTeX content
         hebrew_text, english_text, verse_numbers = fetch_interlinear_text(text_ref)
         latex_content = generate_latex_content(text_ref, hebrew_text, english_text, verse_numbers)
 
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            tex_file_path = os.path.join(tmpdirname, 'output.tex')
-            print(f"Temporary directory created: {tmpdirname}")  # Log temp directory path
-            print(f"Temporary LaTeX file path: {tex_file_path}")  # Log LaTeX file path
+        # Preparing the payload for the latex-online API
+        payload = {'text': latex_content}
+        
+        # Sending a request to the latex-online service
+        response = requests.post('https://latexonline.cc/compile', params=payload)
 
-            with open(tex_file_path, 'w', encoding='utf-8') as tex_file:
-                tex_file.write(latex_content)
-                print("LaTeX content written to file")  # Confirm content writing
+        if response.status_code == 200:
+            # Returning the PDF directly if compilation was successful
+            pdf_in_memory = BytesIO(response.content)
+            pdf_in_memory.seek(0)
+            return send_file(pdf_in_memory, as_attachment=True, 
+                             download_name=f"{text_ref.replace(' ', '_')}.pdf", 
+                             mimetype='application/pdf')
+        else:
+            # Handling compilation errors
+            error_message = f"Error compiling LaTeX document: {response.text}"
+            logging.error(error_message)
+            return error_message
 
-            # Compile LaTeX file to PDF
-            process = subprocess.run(['xelatex', tex_file_path, '-output-directory', tmpdirname],
-                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
-            print("STDOUT:", process.stdout.decode())  # Log standard output
-            print("STDERR:", process.stderr.decode())  # Log standard error
-
-            if process.returncode != 0:
-                error_message = f"An error occurred: {process.stderr.decode()}"
-                return error_message
-
-            # Read the generated PDF into memory
-            pdf_file_path = tex_file_path.replace('.tex', '.pdf')
-            if not os.path.exists(pdf_file_path):
-                print(f"Expected PDF not found at: {pdf_file_path}")  # Log if PDF is not found
-            else:
-                print(f"PDF successfully generated at: {pdf_file_path}")  # Confirm PDF generation
-
-            with open(pdf_file_path, 'rb') as pdf_file:
-                pdf_in_memory = BytesIO(pdf_file.read())
-
-        pdf_in_memory.seek(0)
-        return send_file(pdf_in_memory, as_attachment=True, download_name=f"{text_ref.replace(' ', '_')}.pdf", mimetype='application/pdf')
     except Exception as e:
+        # Handling unexpected errors
         logging.error(f"An unexpected error occurred: {e}")
         traceback.print_exc()
         return f"An unexpected error occurred: {str(e)}"
 
-    return send_file(pdf_in_memory, as_attachment=True, 
-                     download_name=f"{text_ref.replace(' ', '_')}.pdf", 
-                     mimetype='application/pdf')
 
 
 
