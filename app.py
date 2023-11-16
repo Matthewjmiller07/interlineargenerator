@@ -190,15 +190,22 @@ def generate_pdf():
         hebrew_text, english_text, verse_numbers = fetch_interlinear_text(text_ref)
         latex_content = generate_latex_content(text_ref, hebrew_text, english_text, verse_numbers)
 
-        # Use a temporary file to store the LaTeX file and compile it
         with tempfile.TemporaryDirectory() as tmpdirname:
             tex_file_path = os.path.join(tmpdirname, 'output.tex')
             with open(tex_file_path, 'w', encoding='utf-8') as tex_file:
                 tex_file.write(latex_content)
 
-            # Compile LaTeX file to PDF
-            subprocess.run(['xelatex', tex_file_path, '-output-directory', tmpdirname], check=True)
-            
+            # Modified subprocess.run command to capture stdout and stderr
+            process = subprocess.run(['xelatex', tex_file_path, '-output-directory', tmpdirname],
+                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+
+            # Check for errors in subprocess execution
+            if process.returncode != 0:
+                error_message = f"An error occurred: {process.stderr.decode()}"
+                print("STDOUT:", process.stdout.decode())
+                print("STDERR:", process.stderr.decode())
+                return error_message
+
             # Read the generated PDF into memory
             pdf_file_path = tex_file_path.replace('.tex', '.pdf')
             with open(pdf_file_path, 'rb') as pdf_file:
@@ -207,7 +214,7 @@ def generate_pdf():
         pdf_in_memory.seek(0)
         return send_file(pdf_in_memory, as_attachment=True, download_name=f"{text_ref.replace(' ', '_')}.pdf", mimetype='application/pdf')
     except Exception as e:
-        return f"An error occurred: {e}"
+        return f"An unexpected error occurred: {e}"
 
 
 import requests
