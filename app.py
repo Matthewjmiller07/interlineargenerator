@@ -214,8 +214,8 @@ def generate_pdf():
             # Returning the PDF directly if compilation was successful
             pdf_in_memory = BytesIO(response.content)
             pdf_in_memory.seek(0)
-            return send_file(pdf_in_memory, as_attachment=True,
-                             download_name=f"{text_ref.replace(' ', '_')}.pdf",
+            return send_file(pdf_in_memory, as_attachment=True, 
+                             download_name=f"{text_ref.replace(' ', '_')}.pdf", 
                              mimetype='application/pdf')
         else:
             # Handling compilation errors
