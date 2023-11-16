@@ -121,14 +121,21 @@ def generate_latex_content(text_ref, hebrew_text, english_text, verse_numbers):
 
 
 def compile_latex_to_pdf(latex_content, output_filename):
-    # Create a temporary directory for LaTeX compilation
     with tempfile.TemporaryDirectory() as temp_dir:
         tex_file_path = os.path.join(temp_dir, output_filename + '.tex')
         with open(tex_file_path, 'w', encoding='utf-8') as file:
             file.write(latex_content)
 
-        # Run XeTeX with the temporary directory as the working directory
-        subprocess.run(['xelatex', tex_file_path], check=True, cwd=temp_dir)
+        # Modified subprocess.run command to capture stdout and stderr
+        process = subprocess.run(['xelatex', tex_file_path],
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, cwd=temp_dir)
+
+        # Check for errors in subprocess execution
+        if process.returncode != 0:
+            error_message = f"XeTeX compilation failed: {process.stderr.decode()}"
+            print("STDOUT:", process.stdout.decode())
+            print("STDERR:", process.stderr.decode())
+            raise Exception(error_message)  # or handle the error as appropriate
 
         # Clean up auxiliary files and move PDF to the desired output location
         for ext in ['.aux', '.log', '.out']:
@@ -137,6 +144,7 @@ def compile_latex_to_pdf(latex_content, output_filename):
             except FileNotFoundError:
                 pass
         os.rename(os.path.join(temp_dir, output_filename + '.pdf'), output_filename + '.pdf')
+
 
 
 def create_pdfs_from_csv(csv_file_path, output_dir, start_row=1, end_row=929):
