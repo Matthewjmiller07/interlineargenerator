@@ -204,18 +204,18 @@ def generate_pdf():
         hebrew_text, english_text, verse_numbers = fetch_interlinear_text(text_ref)
         latex_content = generate_latex_content(text_ref, hebrew_text, english_text, verse_numbers)
 
-        # Preparing the payload for the latex-online API
-        payload = {'text': latex_content}
-        
-        # Sending a request to the latex-online service
-        response = requests.post('https://latexonline.cc/compile', params=payload)
+        # Sending a POST request to the latex-online service with LaTeX content in the body
+        response = requests.post(
+            'https://latexonline.cc/compile',
+            data={'text': latex_content}
+        )
 
         if response.status_code == 200:
             # Returning the PDF directly if compilation was successful
             pdf_in_memory = BytesIO(response.content)
             pdf_in_memory.seek(0)
-            return send_file(pdf_in_memory, as_attachment=True, 
-                             download_name=f"{text_ref.replace(' ', '_')}.pdf", 
+            return send_file(pdf_in_memory, as_attachment=True,
+                             download_name=f"{text_ref.replace(' ', '_')}.pdf",
                              mimetype='application/pdf')
         else:
             # Handling compilation errors
