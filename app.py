@@ -123,30 +123,40 @@ def generate_latex_content(text_ref, hebrew_text, english_text, verse_numbers):
     return latex_content
 
 
-def compile_latex_to_pdf(latex_content, output_filename):
-    with tempfile.TemporaryDirectory() as temp_dir:
-        tex_file_path = os.path.join(temp_dir, output_filename + '.tex')
-        with open(tex_file_path, 'w', encoding='utf-8') as file:
-            file.write(latex_content)
+def compile_latex_to_pdf(latex_content, output_filename, local_git_dir):
+    tex_file_path = os.path.join(local_git_dir, output_filename + '.tex')
+    with open(tex_file_path, 'w', encoding='utf-8') as file:
+        file.write(latex_content)
 
-        # Modified subprocess.run command to capture stdout and stderr
+    with tempfile.TemporaryDirectory() as temp_dir:
         process = subprocess.run(['xelatex', tex_file_path],
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, cwd=temp_dir)
 
-        # Check for errors in subprocess execution
         if process.returncode != 0:
             error_message = f"XeTeX compilation failed: {process.stderr.decode()}"
             print("STDOUT:", process.stdout.decode())
             print("STDERR:", process.stderr.decode())
-            raise Exception(error_message)  # or handle the error as appropriate
+            raise Exception(error_message)
 
-        # Clean up auxiliary files and move PDF to the desired output location
         for ext in ['.aux', '.log', '.out']:
             try:
                 os.remove(os.path.join(temp_dir, output_filename + ext))
             except FileNotFoundError:
                 pass
+
         os.rename(os.path.join(temp_dir, output_filename + '.pdf'), output_filename + '.pdf')
+
+def push_files_to_github(local_git_dir, commit_message="Update .tex files"):
+    subprocess.run(["git", "-C", local_git_dir, "add", "."], check=True)
+    subprocess.run(["git", "-C", local_git_dir, "commit", "-m", commit_message], check=True)
+    subprocess.run(["git", "-C", local_git_dir, "push"], check=True)
+
+def generate_github_raw_url(github_username, repository_name, branch_name, filepath):
+    return f"https://raw.githubusercontent.com/{github_username}/{repository_name}/{branch_name}/{filepath}"
+
+def send_to_latex_online_api(tex_file_url):
+    response = requests.get(f'https://latexonline.cc/compile?url={tex_file_url}')
+    return response
 
 
 
@@ -197,40 +207,32 @@ logging.basicConfig(level=logging.DEBUG, filename='app.log',
 @app.route('/generate_pdf', methods=['POST'])
 def generate_pdf():
     text_ref = request.form['text_ref']
-    logging.info(f"Received request to generate PDF for: {text_ref}")
+    github_username = 'matthewjmiller07'
+    repository_name = 'interlineargenerator'
+    branch_name = 'main'
+    local_git_dir = '.'  # Current working directory
+
 
     try:
-        # Fetching the interlinear text and generating LaTeX content
         hebrew_text, english_text, verse_numbers = fetch_interlinear_text(text_ref)
         latex_content = generate_latex_content(text_ref, hebrew_text, english_text, verse_numbers)
-
-        # Sending a POST request to the latex-online service with LaTeX content in the body
-        response = requests.post(
-            'https://latexonline.cc/compile',
-            data={'text': latex_content}
-        )
-
+        output_filename = f'{text_ref.replace(" ", "_")}.pdf'
+        
+        compile_latex_to_pdf(latex_content, output_filename, local_git_dir)
+        push_files_to_github(local_git_dir)
+        
+        tex_file_url = generate_github_raw_url(github_username, repository_name, branch_name, output_filename)
+        response = send_to_latex_online_api(tex_file_url)
+        
         if response.status_code == 200:
-            # Returning the PDF directly if compilation was successful
             pdf_in_memory = BytesIO(response.content)
             pdf_in_memory.seek(0)
-            return send_file(pdf_in_memory, as_attachment=True, 
-                             download_name=f"{text_ref.replace(' ', '_')}.pdf", 
-                             mimetype='application/pdf')
+            return send_file(pdf_in_memory, as_attachment=True, mimetype='application/pdf')
         else:
-            # Handling compilation errors
-            error_message = f"Error compiling LaTeX document: {response.text}"
-            logging.error(error_message)
-            return error_message
+            return f"Error compiling LaTeX document: {response.text}"
 
     except Exception as e:
-        # Handling unexpected errors
-        logging.error(f"An unexpected error occurred: {e}")
-        traceback.print_exc()
-        return f"An unexpected error occurred: {str(e)}"
-
-
-
+        return f"An error occurred: {e}"
 
 
 import requests
@@ -309,7 +311,7 @@ def extract_start_verse(text_ref):
     return int(verse)
 
 
-# Example usage 1
+# Example usage
 hebrew_text, english_text, verse_numbers = fetch_interlinear_text("Mishnah Berachot 3:2-4:1")
 for he, en, verse in zip(hebrew_text, english_text, verse_numbers):
     print(f'Verse {verse}:')
