@@ -195,34 +195,46 @@ import traceback  # New import for detailed error logging
 @app.route('/generate_pdf', methods=['POST'])
 def generate_pdf():
     text_ref = request.form['text_ref']
+    print(f"Received request to generate PDF for: {text_ref}")  # Log the received text reference
 
     try:
+        # Assuming you have functions 'fetch_interlinear_text' and 'generate_latex_content'
         hebrew_text, english_text, verse_numbers = fetch_interlinear_text(text_ref)
         latex_content = generate_latex_content(text_ref, hebrew_text, english_text, verse_numbers)
 
         with tempfile.TemporaryDirectory() as tmpdirname:
             tex_file_path = os.path.join(tmpdirname, 'output.tex')
+            print(f"Temporary directory created: {tmpdirname}")  # Log temp directory path
+            print(f"Temporary LaTeX file path: {tex_file_path}")  # Log LaTeX file path
+
             with open(tex_file_path, 'w', encoding='utf-8') as tex_file:
                 tex_file.write(latex_content)
+                print("LaTeX content written to file")  # Confirm content writing
 
+            # Compile LaTeX file to PDF
             process = subprocess.run(['xelatex', tex_file_path, '-output-directory', tmpdirname],
                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+            print("STDOUT:", process.stdout.decode())  # Log standard output
+            print("STDERR:", process.stderr.decode())  # Log standard error
 
             if process.returncode != 0:
                 error_message = f"An error occurred: {process.stderr.decode()}"
-                print("STDOUT:", process.stdout.decode())
-                print("STDERR:", process.stderr.decode())
                 return error_message
 
+            # Read the generated PDF into memory
             pdf_file_path = tex_file_path.replace('.tex', '.pdf')
+            if not os.path.exists(pdf_file_path):
+                print(f"Expected PDF not found at: {pdf_file_path}")  # Log if PDF is not found
+            else:
+                print(f"PDF successfully generated at: {pdf_file_path}")  # Confirm PDF generation
+
             with open(pdf_file_path, 'rb') as pdf_file:
                 pdf_in_memory = BytesIO(pdf_file.read())
 
         pdf_in_memory.seek(0)
         return send_file(pdf_in_memory, as_attachment=True, download_name=f"{text_ref.replace(' ', '_')}.pdf", mimetype='application/pdf')
-
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        print(f"An unexpected error occurred: {e}")  # Log any unexpected exceptions
         traceback.print_exc()  # Print full traceback
         return f"An unexpected error occurred: {str(e)}"
 
