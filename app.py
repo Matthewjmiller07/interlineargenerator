@@ -124,27 +124,16 @@ def generate_latex_content(text_ref, hebrew_text, english_text, verse_numbers):
 
 
 def compile_latex_to_pdf(latex_content, output_filename, local_git_dir):
+    # Create the .tex file path
     tex_file_path = os.path.join(local_git_dir, output_filename + '.tex')
+
+    # Write the LaTeX content to the .tex file
     with open(tex_file_path, 'w', encoding='utf-8') as file:
         file.write(latex_content)
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        process = subprocess.run(['xelatex', tex_file_path],
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, cwd=temp_dir)
+    # No need to compile the .tex file locally
+    print(f".tex file created at {tex_file_path}")
 
-        if process.returncode != 0:
-            error_message = f"XeTeX compilation failed: {process.stderr.decode()}"
-            print("STDOUT:", process.stdout.decode())
-            print("STDERR:", process.stderr.decode())
-            raise Exception(error_message)
-
-        for ext in ['.aux', '.log', '.out']:
-            try:
-                os.remove(os.path.join(temp_dir, output_filename + ext))
-            except FileNotFoundError:
-                pass
-
-        os.rename(os.path.join(temp_dir, output_filename + '.pdf'), output_filename + '.pdf')
 
 def push_files_to_github(local_git_dir, commit_message="Update .tex files"):
     subprocess.run(["git", "-C", local_git_dir, "add", "."], check=True)
