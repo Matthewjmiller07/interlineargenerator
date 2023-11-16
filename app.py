@@ -1,10 +1,13 @@
 import csv
 import re
+import logging
+import traceback
 import requests
 import subprocess
 import os
 import subprocess
 import tempfile
+from io import BytesIO
 from PyPDF2 import PdfReader
 from flask import Flask, request, send_file
 
@@ -186,16 +189,15 @@ def index():
     </html>
     '''
 
-
-from io import BytesIO
-import tempfile
-
-import traceback  # New import for detailed error logging
+# Configure global logging
+logging.basicConfig(level=logging.DEBUG, filename='app.log',
+                    format='%(asctime)s %(levelname)s: %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S')
 
 @app.route('/generate_pdf', methods=['POST'])
 def generate_pdf():
     text_ref = request.form['text_ref']
-    print(f"Received request to generate PDF for: {text_ref}")  # Log the received text reference
+    logging.info(f"Received request to generate PDF for: {text_ref}")
 
     try:
         # Assuming you have functions 'fetch_interlinear_text' and 'generate_latex_content'
@@ -234,9 +236,14 @@ def generate_pdf():
         pdf_in_memory.seek(0)
         return send_file(pdf_in_memory, as_attachment=True, download_name=f"{text_ref.replace(' ', '_')}.pdf", mimetype='application/pdf')
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")  # Log any unexpected exceptions
-        traceback.print_exc()  # Print full traceback
+        logging.error(f"An unexpected error occurred: {e}")
+        traceback.print_exc()
         return f"An unexpected error occurred: {str(e)}"
+
+    return send_file(pdf_in_memory, as_attachment=True, 
+                     download_name=f"{text_ref.replace(' ', '_')}.pdf", 
+                     mimetype='application/pdf')
+
 
 
 
@@ -324,7 +331,6 @@ for he, en, verse in zip(hebrew_text, english_text, verse_numbers):
     print(f'English: {en}\n')
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))  # Use PORT environment variable if available, else default to 5000
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=False)
 
 
