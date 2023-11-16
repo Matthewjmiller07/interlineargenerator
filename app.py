@@ -190,6 +190,8 @@ def index():
 from io import BytesIO
 import tempfile
 
+import traceback  # New import for detailed error logging
+
 @app.route('/generate_pdf', methods=['POST'])
 def generate_pdf():
     text_ref = request.form['text_ref']
@@ -203,26 +205,27 @@ def generate_pdf():
             with open(tex_file_path, 'w', encoding='utf-8') as tex_file:
                 tex_file.write(latex_content)
 
-            # Modified subprocess.run command to capture stdout and stderr
             process = subprocess.run(['xelatex', tex_file_path, '-output-directory', tmpdirname],
                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
 
-            # Check for errors in subprocess execution
             if process.returncode != 0:
                 error_message = f"An error occurred: {process.stderr.decode()}"
                 print("STDOUT:", process.stdout.decode())
                 print("STDERR:", process.stderr.decode())
                 return error_message
 
-            # Read the generated PDF into memory
             pdf_file_path = tex_file_path.replace('.tex', '.pdf')
             with open(pdf_file_path, 'rb') as pdf_file:
                 pdf_in_memory = BytesIO(pdf_file.read())
 
         pdf_in_memory.seek(0)
         return send_file(pdf_in_memory, as_attachment=True, download_name=f"{text_ref.replace(' ', '_')}.pdf", mimetype='application/pdf')
+
     except Exception as e:
-        return f"An unexpected error occurred: {e}"
+        print(f"An unexpected error occurred: {e}")
+        traceback.print_exc()  # Print full traceback
+        return f"An unexpected error occurred: {str(e)}"
+
 
 
 import requests
